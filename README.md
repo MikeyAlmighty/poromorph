@@ -1,10 +1,12 @@
 # Poromorph
 
-League Of Legends Champion Builds
+League Of Legends Index
+
+![Poro Logo](./assets/poro.png)
 
 # ⚔️ LoL Champion API
 
-Welcome to **Poromorph** — the ultimate **API** for all your League of Legends needs: Champions Item bulds that'll secure your Nexus.
+Welcome to **Poromorph** — the ultimate Champion and Item Index for all your League of Legends needs!
 
 ---
 
