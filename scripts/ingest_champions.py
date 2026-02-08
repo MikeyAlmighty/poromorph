@@ -11,11 +11,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "poromorph.settings")
 django.setup()
 
-from champions.models import Champion, ChampionStats
+from champions.models import Champion, ChampionStats, ChampionInfo, ChampionMedia
 
 load_dotenv()
 
-DATA_DRAGON_VERSION = os.getenv("DATA_DRAGON_VERSION") 
+DATA_DRAGON_VERSION = os.getenv("DATA_DRAGON_VERSION")
 
 CHAMPION_URL = f"https://ddragon.leagueoflegends.com/cdn/{DATA_DRAGON_VERSION}/data/en_US/champion.json"
 
@@ -26,11 +26,17 @@ def fetch_champions():
     data = response.json()
     champions = []
 
-    for _, champ_info in data['data'].items():
+    for key, champ_info in data['data'].items():
         champions.append({
             "champion_id": int(champ_info['key']),
             "name": champ_info['name'],
-            "role": champ_info.get('tags')[0] if champ_info.get('tags') else None
+            "blurb": champ_info["blurb"],
+            "title": champ_info["title"],
+            "partype": champ_info["partype"],
+            "role": champ_info.get('tags')[0] if champ_info.get('tags') else None,
+            "info": champ_info['info'],
+            "media": champ_info['image'],
+            "stats": champ_info['stats']
         })
 
     return champions
@@ -41,28 +47,62 @@ def ingest_champions():
     for champ in champions:
         champion_obj, _ = Champion.objects.update_or_create(
             champion_id=champ["champion_id"],
-            defaults={"name": champ["name"]}
+            defaults={
+                "name": champ["name"],
+                "role": champ["role"],
+                "blurb": champ["blurb"],
+                "title": champ["title"],
+                "partype": champ["partype"]
+            }
         )
 
-        # Create mock stats for demo purposes
-        pick_rate = round(random.uniform(1, 30), 2)      # percent
-        win_rate = round(random.uniform(40, 60), 2)      # percent
-        ban_rate = round(random.uniform(0, 10), 2)       # percent
-        games_played = random.randint(1000, 50000)
+        ChampionMedia.objects.update_or_create(
+            champion=champion_obj,
+            defaults={
+            "full": champ["media"]["full"],
+            "sprite": champ["media"]["sprite"],
+            "group": champ["media"]["group"]
+             }
+        )
+
+        ChampionInfo.objects.update_or_create(
+            champion=champion_obj,
+            patch=DATA_DRAGON_VERSION,
+            defaults={
+                "attack": champ["info"]["attack"],
+                "defense": champ["info"]["defense"],
+                "magic": champ["info"]["magic"],
+                "difficulty": champ["info"]["difficulty"],
+            }
+        )
 
         ChampionStats.objects.update_or_create(
             champion=champion_obj,
             patch=DATA_DRAGON_VERSION,
             defaults={
-                "pick_rate": pick_rate,
-                "win_rate": win_rate,
-                "ban_rate": ban_rate,
-                "games_played": games_played,
-                "updated_at": datetime.now()
+                "hp": champ["stats"]["hp"],
+                "hpperlevel": champ["stats"]["hpperlevel"],
+                "mp": champ["stats"]["mp"],
+                "mpperlevel": champ["stats"]["mpperlevel"],
+                "movespeed": champ["stats"]["movespeed"],
+                "armor": champ["stats"]["armor"],
+                "armorperlevel": champ["stats"]["armorperlevel"],
+                "spellblock": champ["stats"]["spellblock"],
+                "spellblockperlevel": champ["stats"]["spellblockperlevel"],
+                "attackrange": champ["stats"]["attackrange"],
+                "hpregen": champ["stats"]["hpregen"],
+                "hpregenperlevel": champ["stats"]["hpregenperlevel"],
+                "mpregen": champ["stats"]["mpregen"],
+                "mpregenperlevel": champ["stats"]["mpregenperlevel"],
+                "crit": champ["stats"]["crit"],
+                "critperlevel": champ["stats"]["critperlevel"],
+                "attackdamage": champ["stats"]["attackdamage"],
+                "attackdamageperlevel": champ["stats"]["attackdamageperlevel"],
+                "attackspeedperlevel": champ["stats"]["attackspeedperlevel"],
+                "attackspeed": champ["stats"]["attackspeed"]
             }
         )
-
-    print(f"Ingested {len(champions)} champions")
+        print(f"Ingested: {champ["name"]}")
 
 if __name__ == "__main__":
     ingest_champions()
